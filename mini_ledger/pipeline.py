@@ -1,4 +1,4 @@
-from mini_ledger.exchange_rate import HardcodedRateProvider
+from mini_ledger.exchange_rate import ExchangeRateProvider, HardcodedRateProvider
 from mini_ledger.models import DailyAccountSummary, DeadLetterRecord, EnrichedTransaction, ReasonCode, Transaction
 from mini_ledger.validator import TransactionValidator
 from mini_ledger.reader import TransactionReader
@@ -7,9 +7,9 @@ from collections import defaultdict
 
 class Pipeline:
 
-    def __init__(self):
+    def __init__(self, rate_provider: ExchangeRateProvider = None):
         self.validator = TransactionValidator()
-        self.rate_provider = HardcodedRateProvider()
+        self.rate_provider = rate_provider or HardcodedRateProvider()
         self.reader = TransactionReader()
 
     def _process_row(self, row: dict) -> Transaction | DeadLetterRecord:

@@ -11,6 +11,8 @@ def main():
     file_path = sys.argv[1]
 
     pipeline = Pipeline()
+    #pipeline =Pipeline(LiveApiRateProvider()) # For API fetching rate data
+    
     daily_summaries_list, deadLetterRecord_list, metrics = pipeline.run(file_path)
 
     print("\n======== DAILY ACCOUNT SUMMARIES ========")
