@@ -9,5 +9,6 @@ class HardcodedRateProvider:
         if currency == "CHF":
             return 1.00
         
-        # returns None when the key doesn't exist
+        # No entry means no rate for that day. The pipeline dead-letters those
+        # rather than guessing at a number.
         return self.RATES.get((currency, date))

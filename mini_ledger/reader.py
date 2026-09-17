@@ -1,7 +1,5 @@
 import csv
 
-from mini_ledger.models import Transaction
-
 
 class TransactionReader:
 

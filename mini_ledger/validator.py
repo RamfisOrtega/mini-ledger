@@ -28,7 +28,7 @@ class TransactionValidator:
         else:
             return Transaction(**{
                 **raw_row,
-                "amount": parsed_amount,  # reuse, don't call again
+                "amount": parsed_amount,  # reuse what we parsed above rather than paying for it twice
                 "timestamp": self._parse_timestamp(raw_row["timestamp"])
             })
             

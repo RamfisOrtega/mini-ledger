@@ -24,7 +24,7 @@ class Pipeline:
             return EnrichedTransaction(transaction=transaction, amount_chf=transaction.amount * rate)
     
     def _aggregate(self, enriched: list[EnrichedTransaction]) -> list[DailyAccountSummary]:
-        # defaultdict with float accumulates sums
+        # defaultdict saves seeding each key before we add to it
         totals = defaultdict(float)
 
         for e in enriched:
@@ -41,15 +41,15 @@ class Pipeline:
         return result
     
 
-    def run(self, file_path: str) -> tuple[list[DailyAccountSummary], list[DeadLetterRecord], dict]: # 3th item is the metric
+    def run(self, file_path: str) -> tuple[list[DailyAccountSummary], list[DeadLetterRecord], dict]:
         transactions_list = []
         enriched_list = []
         daily_summaries_list = []
         deadLetterRecord_list = []
 
-        # 1. read
+        # Pull the raw rows off disk.
         records_list = self.reader.read(file_path)
-        # 2. validate each row → Transaction or DeadLetterRecord
+        # A row either becomes a Transaction or gets set aside with a reason code.
         for record in records_list:
              record_object = self._process_row(record)
              if isinstance(record_object, DeadLetterRecord):
@@ -57,7 +57,8 @@ class Pipeline:
              elif isinstance(record_object, Transaction):
                   transactions_list.append(record_object)
              
-        # 3. enrich each Transaction → EnrichedTransaction or DeadLetterRecord
+        # Convert to CHF. A currency with no rate for that day is set aside too,
+        # since one missing rate shouldn't sink the whole run.
         if transactions_list:
              for txn in transactions_list:
                   result = self._enrich_row(txn)
@@ -67,12 +68,11 @@ class Pipeline:
                        enriched_list.append(result)
         
 
-        # 4. aggregate enriched → DailyAccountSummary
+        # Roll up whatever survived, per account per day.
         if enriched_list:
              daily_summaries_list = self._aggregate(enriched_list)
 
-        # 5. return summaries, dead_letters, metrics
-
+        # Counted at the end so the numbers can't drift from the lists above.
         metrics = {
             "total_processed": len(records_list),
             "valid": len(transactions_list),

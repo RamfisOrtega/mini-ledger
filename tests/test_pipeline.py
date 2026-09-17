@@ -52,7 +52,7 @@ def gbp_transaction() -> Transaction:
     )
 
 @pytest.fixture
-def enriched_same_account_same_date() -> list[EnrichedTransaction]: # For the _aggregate_groups_by_account_and_date test
+def enriched_same_account_same_date() -> list[EnrichedTransaction]: # two A1 rows on the same day, so these should collapse into one summary
     t1 = Transaction(
         txn_id='t1', account_id='A1',
         timestamp=datetime(2026, 4, 28, 10, 15, 0, tzinfo=timezone.utc),
@@ -80,7 +80,7 @@ def test_pipeline_invalid_rows_become_dead_letters(pipeline: Pipeline, invalid_r
         assert isinstance(result, DeadLetterRecord)
 
 def test_pipeline_enriched_transactions_have_chf_amount(pipeline: Pipeline, valid_transaction: Transaction):
-    result = pipeline._enrich_row(valid_transaction) # return this type: EnrichedTransaction
+    result = pipeline._enrich_row(valid_transaction)
     valid_usd_exchange_rate = 0.90
     correct_value = valid_transaction.amount * valid_usd_exchange_rate
 
@@ -100,18 +100,18 @@ def test_pipeline_missing_rate_goes_to_dead_letter(pipeline: Pipeline, gbp_trans
     assert result.reason_code == ReasonCode.MISSING_RATE
 
 def test_pipeline_returns_daily_summaries(pipeline: Pipeline):
-    daily_summaries_list, _, _ = pipeline.run("data/transactions.csv") # only captures the daily summaries list
+    daily_summaries_list, _, _ = pipeline.run("data/transactions.csv") # only the summaries matter here
     assert len(daily_summaries_list)> 1
     
 
 def test_pipeline_correct_total_chf_for_account(pipeline: Pipeline):
     daily_summaries_list, _, _ = pipeline.run("data/transactions.csv")
-    # find A1 on 2026-04-28
+    # grab A1's row for 2026-04-28
     
     is_a1 = lambda s: s.account_id =="A1"
     is_target_date = lambda s: s.date == "2026-04-28"
 
-    a1 = next(s for s in daily_summaries_list if is_a1 and is_target_date)
+    a1 = next(s for s in daily_summaries_list if is_a1(s) and is_target_date(s))
 
     assert a1.total_chf == 315.00
     
